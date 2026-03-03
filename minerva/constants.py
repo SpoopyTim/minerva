@@ -3,6 +3,13 @@ import shutil
 import tempfile
 from pathlib import Path
 
+if os.environ.get("MINERVA_TEMP_DIR"):
+    TEMP_DIR = Path(os.environ["MINERVA_TEMP_DIR"])
+elif os.name == "posix":
+    TEMP_DIR = Path.home() / ".minerva-dpn" / "tmp"
+else:
+    TEMP_DIR = Path(tempfile.gettempdir()) / ".minerva-dpn"
+
 # servers
 SERVER_URL = os.environ.get("MINERVA_SERVER", "https://api.minerva-archive.org")
 UPLOAD_SERVER_URL = os.environ.get("MINERVA_UPLOAD_SERVER", "https://gate.minerva-archive.org")
@@ -14,7 +21,6 @@ TOKEN_FILE = Path(os.environ.get("MINERVA_TOKEN_FILE", Path.home() / ".minerva-d
 CONCURRENCY = int(os.environ.get("MINERVA_CONCURRENCY", 2))
 BATCH_SIZE = int(os.environ.get("MINERVA_BATCH_SIZE", 10))
 ARIA2C = shutil.which("aria2c")
-TEMP_DIR = Path(os.environ.get("MINERVA_TEMP_DIR", Path(tempfile.gettempdir()) / ".minerva-dpn"))
 KEEP_FILES = os.environ.get("MINERVA_KEEP_FILES", "false").lower() in ("1", "true", "yes")
 MAX_RETRIES = int(os.environ.get("MINERVA_MAX_RETRIES", 3))
 RETRY_DELAY = int(os.environ.get("MINERVA_RETRY_DELAY", 5))
