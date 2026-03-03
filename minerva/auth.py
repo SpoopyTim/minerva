@@ -57,10 +57,11 @@ def do_login(server_url: str) -> str:
 
     url = f"{server_url}/auth/discord/login?worker_callback=http://127.0.0.1:19283/"
     console.print("[bold]Opening browser for Discord login...")
-    if (RUNNING_IN_DOCKER):
-        console.print(f"[dim]You seem to be running in a container. Make sure the token is available from ~/minerva/token inside the container. See the README for more info.")
     console.print(f"[dim]If it doesn't open: {url}")
     webbrowser.open(url)
+    if (RUNNING_IN_DOCKER):
+        console.print("[dim]You seem to be running in a container which might not be able to open a browser link.")
+        console.print("[dim]If the link is not working, see the alternative authentication method in the README.")
 
     while not event.is_set():
         srv.handle_request()

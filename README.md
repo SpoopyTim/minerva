@@ -86,24 +86,41 @@ and avatar in the worker dashboard leaderboards.
 This does not give Minerva, this script, or anyone else access to your account, or any permissions.
 
 ## Docker
-This section is for advanced users and requires some pre-existing familiarity with docker. The guide assumes docker is running in a unix environment.
 
-### 1. Clone the repository
-Clone the repository to somewhere on your device
+You can run the Minerva Worker inside a headless Docker container.
+The following steps assume some knowledge on git/docker.
 
-### 2. Obtain a token
-Obtain a token using this url: [`https://api.minerva-archive.org/auth/discord/login?worker_callback=http://127.0.0.1:19283/`](https://api.minerva-archive.org/auth/discord/login?worker_callback=http://127.0.0.1:19283/). It will ask for a connection to your discord account for authentication. This will only verify your account and will not store your discord token anywhere (it doesn't even have access to your discord token).
+To change the settings of the worker, edit the the command section of the docker-compose file.
+For example, to request 20 jobs at a time, with 10 concurrent downloads, change it to:
+`command: ["uv", "run", "minerva", "run", "-c", "10", "-b", "20"]`
 
-This will redirect to localhost and provide you with the token in the address bar. For example `http://127.0.0.1:19283/?token=1234`, where `1234` is your token.
+### 1. Download a copy of the repository
 
-Then place your token in a file in your home directory at `~/minerva/token`.
+- Clone the Git Repository: `git clone https://github.com/rlaphoenix/minerva`  
+- Enter it: `cd minerva`
 
-```bash
-echo -n "<token>" > ~/minerva/token
-```
+### 2. Get an Authorization Token
 
-### Start the container
-Bring up the container with `docker compose up -d` from the root of the repository. This will build the package from source, start the worker, and then read the token from the bind-mounted volume `~/minerva`
+There's two ways to go about this,
+
+- either run the normal python script to authenticate with it,
+- or, get and save the token to a specific location manually.
+
+To get the token manually, go to <https://api.minerva-archive.org/auth/discord/login> and you will get a
+token value once you authorize with Discord. Copy that token value and save it to `~/.minerva-dpn/token`
+on Linux/macOS, or save it to `%USERPROFILE%/.minerva-dpn/token` on Windows.
+
+The token file must stay there at all times for the Docker container to have it. The location where the
+token needs to be can be changed, just make sure you change the volume location and environment variable
+in the docker-compose config.
+
+### 3. Start the container
+
+Build the Docker image and start the container with `docker compose up --build`.
+
+> [!TIP]
+If you are on a headless system, or want it to run in the background instead of in the terminal, add
+`-d` to the command. You can later stop the container with `docker compose down`.
 
 ## Development
 

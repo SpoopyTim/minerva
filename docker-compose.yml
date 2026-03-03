@@ -2,8 +2,10 @@ services:
   archive:
     build:
       context: .
+    # change your worker settings here:
+    command: ["uv", "run", "minerva", "run"]
     environment:
-      # These are populated from ./minerva/constants.py
+      # extra settings you can change, see ./minerva/constants.py
       MINERVA_SERVER: "https://api.minerva-archive.org"
       MINERVA_UPLOAD_SERVER: "https://gate.minerva-archive.org"
       MINERVA_TOKEN_FILE: "~/.minerva-dpn/token"
@@ -14,7 +16,7 @@ services:
       MINERVA_QUEUE_PREFETCH: 2
       MINERVA_HISTORY_LINES: 5
     volumes:
-      - ${HOME}/minerva/:/root/.minerva-dpn
+      - ${HOME}/.minerva-dpn/:/root/.minerva-dpn
 
 volumes:
   data:
