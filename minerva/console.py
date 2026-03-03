@@ -37,8 +37,14 @@ class WorkerDisplay:
         now = time.monotonic()
         with self._lock:
             self.active[file_id] = dict(
-                label=label, status="DL", size=0, done=0,
-                start_time=now, prev_done=0, prev_time=now, speed=0.0,
+                label=label,
+                status="DL",
+                size=0,
+                done=0,
+                start_time=now,
+                prev_done=0,
+                prev_time=now,
+                speed=0.0,
             )
 
     def job_update(self, file_id: int, status: str, size: int | None = None, done: int | None = None) -> None:
@@ -98,29 +104,26 @@ class WorkerDisplay:
             speed = info["speed"]
             elapsed = now - info["start_time"]
 
-            speed_str = (
-                f"[dim]{humanize.naturalsize(speed, gnu=True)}/s[/dim]"
-                if speed > 0
-                else "[dim]—[/dim]"
-            )
+            speed_str = f"[dim]{humanize.naturalsize(speed, gnu=True)}/s[/dim]" if speed > 0 else "[dim]—[/dim]"
 
             if size:
                 pct = min(1.0, done / size)
                 bar_w = 14
                 filled = int(bar_w * pct)
                 bar = (
-                    f"[{color}]" + "█" * filled + f"[/{color}]"
-                    + "[dim]" + "░" * (bar_w - filled) + "[/dim]"
+                    f"[{color}]"
+                    + "█" * filled
+                    + f"[/{color}]"
+                    + "[dim]"
+                    + "░" * (bar_w - filled)
+                    + "[/dim]"
                     + f" {pct * 100:4.0f}%"
                 )
                 size_str = humanize.naturalsize(size)
             else:
                 spin = _SPINNER[int(now * 8) % len(_SPINNER)]
                 elapsed_str = f"{int(elapsed // 60):02d}:{int(elapsed % 60):02d}"
-                bar = (
-                    f"[{color}]{spin}[/{color}] "
-                    f"[dim]{humanize.naturalsize(done)} — {elapsed_str}[/dim]"
-                )
+                bar = f"[{color}]{spin}[/{color}] [dim]{humanize.naturalsize(done)} — {elapsed_str}[/dim]"
                 size_str = "[dim]?[/dim]"
 
             table.add_row(

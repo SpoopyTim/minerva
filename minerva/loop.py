@@ -40,8 +40,12 @@ async def worker_loop(
     console.print()
 
     if not ARIA2C:
-        console.print("[yellow]Warning: aria2c not found, downloads will be slower and the progress bar wont work.[/yellow]")
-        console.print("[yellow]         Install aria2c for better performance. On Windows run: winget install aria2.aria2[/yellow]")
+        console.print(
+            "[yellow]Warning: aria2c not found, downloads will be slower and the progress bar wont work.[/yellow]"
+        )
+        console.print(
+            "[yellow]         Install aria2c for better performance. On Windows run: winget install aria2.aria2[/yellow]"
+        )
 
     temp_dir.mkdir(parents=True, exist_ok=True)
 
