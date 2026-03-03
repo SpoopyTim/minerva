@@ -116,11 +116,11 @@ in the docker-compose config.
 
 ### 3. Start the container
 
-Build the Docker image and start the container with `docker compose up --build`.
+Build the Docker image and start the container with `docker compose up -d` to run it in the background.
+You can later stop the container with `docker compose down`.
 
 > [!TIP]
-If you are on a headless system, or want it to run in the background instead of in the terminal, add
-`-d` to the command. You can later stop the container with `docker compose down`.
+If you prefer to run it in the foreground (attached to your terminal), simply use `docker compose up`.
 
 ## Development
 
