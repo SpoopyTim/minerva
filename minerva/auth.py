@@ -1,5 +1,4 @@
 import http.server
-import os
 import threading
 import urllib.parse
 import webbrowser
@@ -7,7 +6,7 @@ from typing import Any
 
 from minerva import __version__
 from minerva.console import console
-from minerva.constants import TOKEN_FILE, IS_DOCKER
+from minerva.constants import IS_DOCKER, TOKEN_FILE
 
 
 def auth_headers(token: str) -> dict[str, str]:
