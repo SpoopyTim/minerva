@@ -95,7 +95,8 @@ class WorkerDisplay:
             done_count = self._total_done
             fail_count = self._total_fails
             total_bytes = self._total_bytes
-            total_speed = sum(x["speed"] for x in snapshot)
+            dl_speed = sum(x["speed"] for x in snapshot if x["status"] == "DL")
+            ul_speed = sum(x["speed"] for x in snapshot if x["status"] == "UL")
 
         h = int(elapsed_total // 3600)
         m = int((elapsed_total % 3600) // 60)
@@ -118,15 +119,18 @@ class WorkerDisplay:
                 )
             )
 
+        def get_size(speed: int | float | None) -> str:
+            return humanize.naturalsize(speed or 0, binary=True, gnu=False, format="%.2f").replace(" Bytes", "b")
+
         stats = Table.grid(expand=True)
         stats.add_column(justify="left")
         stats.add_column(justify="right")
         stats.add_row(
-            f"Uptime: [dim]{h:02d}:{m:02d}:{s:02d}[/dim] "
-            + f"Uploaded: [dim]{humanize.naturalsize(total_bytes) if total_bytes else 0} ({done_count} files)[/dim] "
-            + f"Failures: [dim]{fail_count}[/dim] "
-            + f"Speed: [dim]{humanize.naturalsize(total_speed, binary=True, gnu=False, format='%.2f').replace(' ', '')}/s[/dim]",
-            f"{self._username} #{rank} [dim]({humanize.naturalsize(float(uploaded)) if uploaded else 0})[/dim]",
+            f"[cyan]{self._username} #{rank or '--'}[/cyan] [dim]({get_size(float(uploaded or 0))})[/dim] "
+            + f"Uploaded: [dim]{get_size(total_bytes)} ({done_count} files)[/dim] "
+            + f"Failures: [dim]{fail_count}[/dim]",
+            f"[green]⬇{get_size(dl_speed)}/s[/green] [blue]⬆{get_size(ul_speed)}/s[/blue] "
+            + f"[dim]{h:02d}:{m:02d}:{s:02d}[/dim]",
         )
 
         return stats
