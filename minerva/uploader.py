@@ -1,11 +1,12 @@
 import asyncio
 import hashlib
 from pathlib import Path
-from typing import Callable
+from typing import Any, Callable
 
 import httpx
 
 from minerva.auth import auth_headers
+from minerva.cache import job_cache
 from minerva.constants import (
     UPLOAD_CHUNK_RETRIES,
     UPLOAD_CHUNK_SIZE,
@@ -16,30 +17,40 @@ from minerva.error_handling import _raise_if_upgrade_required, _retry_sleep, _re
 
 
 async def upload_file(
-    upload_server_url: str, token: str, file_id: int, path: Path, on_progress: Callable[[int, int], None] | None = None
+    upload_server_url: str,
+    token: str,
+    path: Path,
+    job: dict[str, Any],
+    on_progress: Callable[[int, int], None] | None = None,
 ) -> dict:
     # Fresh client per upload: multipart state must not be shared across coroutines
     headers = auth_headers(token)
     timeout = httpx.Timeout(connect=30, read=300, write=300, pool=30)
+    file_id = job["file_id"]
+    session_id = job.get("session_id")
     async with httpx.AsyncClient(timeout=timeout) as client:
         # 1. Start session
-        session_id = None
-        for attempt in range(1, UPLOAD_START_RETRIES + 1):
-            try:
-                resp = await client.post(f"{upload_server_url}/api/upload/{file_id}/start", headers=headers)
-                _raise_if_upgrade_required(resp)
-                if _retryable_status(resp.status_code):
+        if not session_id:
+            for attempt in range(1, UPLOAD_START_RETRIES + 1):
+                try:
+                    resp = await client.post(f"{upload_server_url}/api/upload/{file_id}/start", headers=headers)
+                    _raise_if_upgrade_required(resp)
+                    if _retryable_status(resp.status_code):
+                        if attempt == UPLOAD_START_RETRIES:
+                            raise RuntimeError(f"upload start failed ({resp.status_code})")
+                        await asyncio.sleep(_retry_sleep(attempt))
+                        continue
+                    resp.raise_for_status()
+                    session_id = resp.json().get("session_id")
+                    if not session_id:
+                        raise RuntimeError("server did not return a session id")
+                    job["session_id"] = session_id
+                    job_cache.set(job)
+                    break
+                except httpx.HTTPError as e:
                     if attempt == UPLOAD_START_RETRIES:
-                        raise RuntimeError(f"upload start failed ({resp.status_code})")
+                        raise RuntimeError(f"upload start failed ({e})") from e
                     await asyncio.sleep(_retry_sleep(attempt))
-                    continue
-                resp.raise_for_status()
-                session_id = resp.json()["session_id"]
-                break
-            except httpx.HTTPError as e:
-                if attempt == UPLOAD_START_RETRIES:
-                    raise RuntimeError(f"upload start failed ({e})") from e
-                await asyncio.sleep(_retry_sleep(attempt))
         if not session_id:
             raise RuntimeError("Failed to create upload session")
 
@@ -94,6 +105,7 @@ async def upload_file(
                     continue
                 resp.raise_for_status()
                 result = resp.json()
+                job_cache.remove(job)
                 break
             except httpx.HTTPError as e:
                 if attempt == UPLOAD_FINISH_RETRIES:

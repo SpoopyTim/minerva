@@ -7,6 +7,7 @@ import humanize
 from pathvalidate import sanitize_filepath
 
 from minerva.auth import auth_headers
+from minerva.cache import job_cache
 from minerva.console import WorkerDisplay, console
 from minerva.constants import MAX_RETRIES, REPORT_RETRIES, RETRY_DELAY
 from minerva.downloader import download_file
@@ -42,12 +43,14 @@ async def process_job(
     dest_path = job["dest_path"]
     label = urllib.parse.unquote(dest_path)
     known_size = job.get("size", 0) or 0
-    display.job_start(file_id, label)
+    display.job_start(job, label)
 
     last_err: Exception | None = None
     file_size: int | None = None
     downloaded: bool = False
     uploaded: bool = False
+
+    job_cache.set(job)
 
     # get local file path, mirroring URL path to avoid collisions, and sanitize for NTFS
     # decodes percent-encoded characters, removes invalid characters for Windows paths
@@ -88,7 +91,7 @@ async def process_job(
             await upload_file(
                 upload_server_url=upload_server_url,
                 token=token,
-                file_id=file_id,
+                job=job,
                 path=local_path,
                 on_progress=lambda done, size: display.job_update(
                     file_id=file_id, status="UL", size=size, done=done, waiting=False

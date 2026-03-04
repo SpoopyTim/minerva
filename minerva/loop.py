@@ -1,6 +1,7 @@
 import asyncio
 from pathlib import Path
 from random import random
+from typing import Any
 from urllib.parse import unquote, urlparse
 
 import httpx
@@ -11,6 +12,7 @@ from humanize import naturalsize
 from rich.live import Live
 
 from minerva.auth import auth_headers
+from minerva.cache import job_cache
 from minerva.console import WorkerDisplay, console
 from minerva.constants import ARIA2C, MAX_RETRIES, QUEUE_PREFETCH
 from minerva.error_handling import _raise_if_upgrade_required
@@ -78,6 +80,34 @@ async def worker_loop(
     min_job_size_bytes = parse_size(min_job_size) if min_job_size else None
     max_job_size_bytes = parse_size(max_job_size) if max_job_size else None
 
+    async def queue_jobs(jobs: list[dict[str, Any]]) -> None:
+        for job in jobs:
+            file_id = job["file_id"]
+            if file_id in seen_ids:
+                continue
+
+            if not job.get("size") and job.get("url"):
+                job["size"] = get_size(job["url"])
+
+            if job.get("size") and (min_job_size_bytes or max_job_size_bytes):
+                if min_job_size_bytes and (job["size"] < min_job_size_bytes):
+                    console.print(
+                        f"[yellow]Skipping job {Path(urlparse(unquote(job['url'])).path).name} "
+                        f"({naturalsize(job['size'])} < "
+                        f"{naturalsize(min_job_size_bytes)})[/yellow]"
+                    )
+                    continue
+                if max_job_size_bytes and (job["size"] > max_job_size_bytes):
+                    console.print(
+                        f"[yellow]Skipping job {Path(urlparse(unquote(job['url'])).path).name} "
+                        f"({naturalsize(job['size'])} > "
+                        f"{naturalsize(max_job_size_bytes)})[/yellow]"
+                    )
+                    continue
+
+            seen_ids.add(file_id)
+            await queue.put(job)
+
     # ── Producer ────────────────────────────────────────────────────────────
     async def producer() -> None:
         no_jobs_warned = False
@@ -86,6 +116,10 @@ async def worker_loop(
                 if queue.qsize() >= concurrency:
                     await asyncio.sleep(0.5)
                     continue
+
+                cached_jobs = job_cache.list()
+                if cached_jobs:
+                    await queue_jobs(cached_jobs)
 
                 free_slots = max(1, queue.maxsize - queue.qsize())
                 fetch_count = min(4, batch_size, free_slots)
@@ -102,7 +136,7 @@ async def worker_loop(
                         stop_event.set()
                         break
                     resp.raise_for_status()
-                    jobs = resp.json().get("jobs", [])
+                    jobs: list[dict] = resp.json().get("jobs", [])
 
                     if not jobs:
                         if not no_jobs_warned:
@@ -112,32 +146,7 @@ async def worker_loop(
                         continue
 
                     no_jobs_warned = False
-                    for job in jobs:
-                        file_id = job["file_id"]
-                        if file_id in seen_ids:
-                            continue
-
-                        if not job.get("size") and job.get("url"):
-                            job["size"] = get_size(job["url"])
-
-                        if job.get("size") and (min_job_size_bytes or max_job_size_bytes):
-                            if min_job_size_bytes and (job["size"] < min_job_size_bytes):
-                                console.print(
-                                    f"[yellow]Skipping job {Path(urlparse(unquote(job['url'])).path).name} "
-                                    f"({naturalsize(job['size'])} < "
-                                    f"{naturalsize(min_job_size_bytes)})[/yellow]"
-                                )
-                                continue
-                            if max_job_size_bytes and (job["size"] > max_job_size_bytes):
-                                console.print(
-                                    f"[yellow]Skipping job {Path(urlparse(unquote(job['url'])).path).name} "
-                                    f"({naturalsize(job['size'])} > "
-                                    f"{naturalsize(max_job_size_bytes)})[/yellow]"
-                                )
-                                continue
-
-                        seen_ids.add(file_id)
-                        await queue.put(job)
+                    await queue_jobs(jobs)
 
                 except httpx.HTTPError as e:
                     console.print(f"[red]Server error: {e}. Retrying in 10s…")

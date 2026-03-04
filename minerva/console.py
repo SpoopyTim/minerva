@@ -33,7 +33,7 @@ class WorkerDisplay:
 
     def __init__(self) -> None:
         self.history: collections.deque = collections.deque(maxlen=HISTORY_LINES)
-        self.active: dict = {}  # file_id -> dict
+        self.active: dict[int, Any] = {}  # file_id -> dict
         self._lock = threading.Lock()
         self._session_start = time.monotonic()
         self._page = 0
@@ -44,20 +44,23 @@ class WorkerDisplay:
         self._leaderboard_cache: tuple[int | None, int | None] | tuple[None, None] = (None, None)
         self._leaderboard_last_fetch = 0
 
-    def job_start(self, file_id: int, label: str) -> None:
+    def job_start(self, job: dict[str, Any], label: str) -> None:
         now = time.monotonic()
         with self._lock:
-            self.active[file_id] = dict(
-                label=label,
-                status="DL",
-                size=0,
-                done=0,
-                waiting=True,
-                start_time=now,
-                prev_done=0,
-                prev_time=now,
-                speed=0.0,
+            job.update(
+                dict(
+                    label=label,
+                    status="DL",
+                    size=job["size"] or 0,
+                    done=0,
+                    waiting=True,
+                    start_time=now,
+                    prev_done=0,
+                    prev_time=now,
+                    speed=0.0,
+                )
             )
+            self.active[job["file_id"]] = job
 
     def job_update(
         self, file_id: int, status: str, size: int | None = None, done: int | None = None, waiting: bool | None = None
@@ -228,11 +231,16 @@ class WorkerDisplay:
                     note = "Failed, retrying the job..."
                 speed_str = f"[{color}]{spin}[/{color}]"
                 bar = f"[dim]{note} {elapsed_str}[/dim]"
+
+            file_str = Path(urlparse(info["label"]).path).name
+            if info.get("is_cached"):
+                file_str = f"[orange1]Cache:[/orange1] {file_str}"
+
             size_str = humanize.naturalsize(size)
 
             table.add_row(
                 f"[{color}]{st}[/{color}]",
-                Path(urlparse(info["label"]).path).name,
+                file_str,
                 size_str,
                 speed_str,
                 bar,
