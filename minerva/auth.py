@@ -4,7 +4,7 @@ import urllib.parse
 import webbrowser
 from typing import Any
 
-from rich import console
+from rich.console import Console
 
 from minerva import __version__
 from minerva.constants import IS_DOCKER, TOKEN_FILE
@@ -54,6 +54,8 @@ def do_login(server_url: str) -> str:
 
     srv = http.server.HTTPServer(("127.0.0.1", 19283), Handler)
     srv.timeout = 120
+
+    console = Console()
 
     url = f"{server_url}/auth/discord/login?worker_callback=http://127.0.0.1:19283/"
     console.print("[bold]Opening browser for Discord login...")
