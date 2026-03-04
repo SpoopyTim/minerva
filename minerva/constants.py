@@ -22,13 +22,14 @@ CONCURRENCY = int(os.environ.get("MINERVA_CONCURRENCY", 2))
 BATCH_SIZE = int(os.environ.get("MINERVA_BATCH_SIZE", 10))
 ARIA2C = shutil.which("aria2c")
 KEEP_FILES = os.environ.get("MINERVA_KEEP_FILES", "false").lower() in ("1", "true", "yes")
-MAX_RETRIES = int(os.environ.get("MINERVA_MAX_RETRIES", 3))
+MAX_DOWNLOAD_RETRIES = int(os.environ.get("MINERVA_MAX_DOWNLOAD_RETRIES", 3))
 RETRY_DELAY = int(os.environ.get("MINERVA_RETRY_DELAY", 5))
 ARIA2C_CONNECTIONS = int(os.environ.get("MINERVA_ARIA2C_CONNECTIONS", 8))
 ARIA2C_PRE_ALLOCATION = os.environ.get("MINERVA_ARIA2C_PRE_ALLOCATION", "prealloc")  # prealloc, falloc, none
 HAS_ARIA2C = ARIA2C is not None
 
 # uploader
+MAX_UPLOAD_RETRIES = int(os.environ.get("MINERVA_UPLOAD_RETRIES", 10))
 UPLOAD_CHUNK_SIZE = (
     8 * 1024 * 1024
 )  # Cloudflare limit is 50 MB, but using 8 MB to reduce total chunks and speed up uploads

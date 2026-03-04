@@ -14,7 +14,7 @@ from rich.live import Live
 from minerva.auth import auth_headers
 from minerva.cache import job_cache
 from minerva.console import WorkerDisplay, console
-from minerva.constants import ARIA2C, MAX_RETRIES, QUEUE_PREFETCH
+from minerva.constants import ARIA2C, MAX_DOWNLOAD_RETRIES, MAX_UPLOAD_RETRIES, QUEUE_PREFETCH
 from minerva.error_handling import _raise_if_upgrade_required
 from minerva.jobs import process_job
 from minerva.size_map import get_size
@@ -55,7 +55,7 @@ async def worker_loop(
     console.print(f"Concurrency:    {concurrency}")
     console.print(f"Batch Size:     {batch_size}")
     console.print(f"Connections:    {aria2c_connections}")
-    console.print(f"Retries:        {MAX_RETRIES}")
+    console.print(f"Retries:        Download: {MAX_DOWNLOAD_RETRIES} Upload: {MAX_UPLOAD_RETRIES}")
     console.print(f"Downloader:     {'aria2c' if ARIA2C else 'httpx'}")
     console.print(f"Min job size:   {naturalsize(parse_size(min_job_size)) if min_job_size else 'N/A'}")
     console.print(f"Max job size:   {naturalsize(parse_size(max_job_size)) if max_job_size else 'N/A'}")

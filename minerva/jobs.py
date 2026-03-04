@@ -9,7 +9,7 @@ from pathvalidate import sanitize_filepath
 from minerva.auth import auth_headers
 from minerva.cache import job_cache
 from minerva.console import WorkerDisplay, console
-from minerva.constants import MAX_RETRIES, REPORT_RETRIES, RETRY_DELAY
+from minerva.constants import MAX_DOWNLOAD_RETRIES, MAX_UPLOAD_RETRIES, REPORT_RETRIES, RETRY_DELAY
 from minerva.downloader import download_file
 from minerva.error_handling import _raise_if_upgrade_required, _retry_sleep, _retryable_status
 from minerva.uploader import upload_file
@@ -47,8 +47,6 @@ async def process_job(
 
     last_err: Exception | None = None
     file_size: int | None = None
-    downloaded: bool = False
-    uploaded: bool = False
 
     job_cache.set(job)
 
@@ -70,31 +68,38 @@ async def process_job(
         return
 
     # Download
-    for attempt in range(1, MAX_RETRIES + 1):
+    for attempt in range(1, MAX_DOWNLOAD_RETRIES + 1):
         try:
-            if not downloaded:
-                display.job_update(file_id, "DL", size=known_size, waiting=False)
-                await download_file(
-                    url,
-                    local_path,
-                    aria2c_connections,
-                    known_size,
-                    pre_allocation,
-                    on_progress=lambda done, size: display.job_update(
-                        file_id=file_id, status="DL", size=size, done=done, waiting=False
-                    ),
-                )
+            display.job_update(file_id, "DL", size=known_size, waiting=False)
+            await download_file(
+                url,
+                local_path,
+                aria2c_connections,
+                known_size,
+                pre_allocation,
+                on_progress=lambda done, size: display.job_update(
+                    file_id=file_id, status="DL", size=size, done=done, waiting=False
+                ),
+            )
             file_size = local_path.stat().st_size
-            downloaded = True
             break
         except Exception as e:
             last_err = e
-            if attempt < MAX_RETRIES:
+            if attempt < MAX_DOWNLOAD_RETRIES:
                 display.job_update(file_id, "RT", done=0, waiting=True)
                 await asyncio.sleep(RETRY_DELAY * attempt)
+            elif attempt == MAX_DOWNLOAD_RETRIES:
+                display.job_done(
+                    file_id, label, ok=False, note=f"Download Failed ({MAX_DOWNLOAD_RETRIES} attempts): {str(last_err)}"
+                )
+                try:
+                    await report_job(server_url, token, file_id, "failed", error=str(last_err)[:500])
+                except Exception:
+                    pass
+                return
 
     # Upload
-    for attempt in range(1, MAX_RETRIES + 1):
+    for attempt in range(1, MAX_UPLOAD_RETRIES + 1):
         try:
             display.job_update(file_id, "UL", size=known_size, done=file_size or 0, waiting=True)
             await upload_file(
@@ -107,34 +112,30 @@ async def process_job(
                 ),
             )
             await report_job(server_url, token, file_id, "completed", bytes_downloaded=file_size)
-            uploaded = True
             break
         except Exception as e:
             last_err = e
-            if attempt < MAX_RETRIES:
+            if attempt < MAX_UPLOAD_RETRIES:
                 display.job_update(file_id, "RT", done=0, waiting=True)
                 await asyncio.sleep(RETRY_DELAY * attempt)
+            elif attempt == MAX_UPLOAD_RETRIES:
+                display.job_done(
+                    file_id, label, ok=False, note=f"Upload Failed ({MAX_UPLOAD_RETRIES} attempts): {str(last_err)}"
+                )
+                try:
+                    await report_job(server_url, token, file_id, "failed", error=str(last_err)[:500])
+                except Exception:
+                    pass
+                return
 
-    if not uploaded:
-        # All retries exhausted on download/upload path
-        display.job_done(file_id, label, ok=False, note=f"[{MAX_RETRIES} attempts] {str(last_err)}")
-        try:
-            await report_job(server_url, token, file_id, "failed", error=str(last_err)[:500])
-        except Exception:
-            pass
-        local_path.unlink(missing_ok=True)
-        return
-
-    # Surface success to user immediately once upload bytes + finish call succeeded
     display.job_done(file_id, label, ok=True, note=humanize.naturalsize(file_size) if file_size else "")
     if not keep_files:
         local_path.unlink(missing_ok=True)
 
-    # Best-effort completion report; do not re-run transfer on control-plane flakiness.
     try:
         await report_job(server_url, token, file_id, "completed", bytes_downloaded=file_size)
     except Exception as e:
-        console.print(f"[yellow]  {dest_path}: uploaded but report delayed ({str(e)[:120]})")
+        console.print(f"[yellow]Uploaded but report delayed for: {dest_path} ({str(e)[:120]})")
 
 
 async def report_job(
