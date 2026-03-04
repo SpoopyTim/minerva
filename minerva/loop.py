@@ -15,7 +15,7 @@ from rich.live import Live
 from minerva.auth import auth_headers
 from minerva.cache import job_cache
 from minerva.console import WorkerDisplay, console
-from minerva.constants import ARIA2C, QUEUE_PREFETCH, IS_DOCKER
+from minerva.constants import ARIA2C, QUEUE_PREFETCH
 from minerva.error_handling import _raise_if_upgrade_required
 from minerva.jobs import process_job
 from minerva.size_map import get_size
