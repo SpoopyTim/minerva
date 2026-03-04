@@ -32,7 +32,7 @@ class Aria2c(Downloader):
             "--console-log-level=notice",
             "--summary-interval=1",
             "--retry-wait=3",
-            "--max-tries=5",
+            "--max-tries=20",
             "--timeout=120",
             "--connect-timeout=15",
             "--continue",
@@ -49,10 +49,12 @@ class Aria2c(Downloader):
                 line_str = line.decode("utf8", errors="replace")
                 match = ARIA_PROGRESS_REGEX.search(line_str)
                 if match:
-                    on_progress(parse_size(match.group(1).strip()), size or parse_size(match.group(2).strip()))
+                    size = size or parse_size(match.group(2).strip())
+                    on_progress(parse_size(match.group(1).strip()), size)
         await proc.wait()
 
         if proc.returncode != 0:
+            on_progress(0, size)
             raise RuntimeError(f"aria2c exit {proc.returncode}")
 
 

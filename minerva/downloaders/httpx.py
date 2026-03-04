@@ -14,15 +14,19 @@ class HTTPX(Downloader):
             timeout=httpx.Timeout(connect=15, read=300, write=60, pool=10),
         ) as client:
             async with client.stream("GET", url) as resp:
-                resp.raise_for_status()
+                total_size = size
 
-                total_size: int | None = size
-                content_length = resp.headers.get("Content-Length")
-                if content_length is not None:
-                    try:
-                        total_size = int(content_length)
-                    except ValueError:
-                        total_size = None
+                if resp and resp.is_success:
+                    content_length = resp.headers.get("Content-Length")
+                    if content_length is not None:
+                        try:
+                            total_size = int(content_length)
+                        except ValueError:
+                            pass
+                else:
+                    if on_progress:
+                        on_progress(0, total_size)
+                    resp.raise_for_status()
 
                 downloaded = 0
                 with open(dest, "wb") as f:
@@ -32,7 +36,6 @@ class HTTPX(Downloader):
                         if total_size is not None:
                             on_progress(downloaded, total_size)
 
-                # mark complete even if total size couldn't be retrieved
                 if on_progress:
                     on_progress(downloaded, total_size or downloaded)
 
