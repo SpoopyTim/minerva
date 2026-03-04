@@ -69,9 +69,9 @@ async def process_job(
         console.print(f"[red]  {dest_path}: Invalid filename: {e}")
         return
 
+    # Download
     for attempt in range(1, MAX_RETRIES + 1):
         try:
-            # Download
             if not downloaded:
                 display.job_update(file_id, "DL", size=known_size, waiting=False)
                 await download_file(
@@ -86,7 +86,16 @@ async def process_job(
                 )
             file_size = local_path.stat().st_size
             downloaded = True
-            # Upload
+            break
+        except Exception as e:
+            last_err = e
+            if attempt < MAX_RETRIES:
+                display.job_update(file_id, "RT", done=0, waiting=True)
+                await asyncio.sleep(RETRY_DELAY * attempt)
+
+    # Upload
+    for attempt in range(1, MAX_RETRIES + 1):
+        try:
             display.job_update(file_id, "UL", size=known_size, done=file_size or 0, waiting=True)
             await upload_file(
                 upload_server_url=upload_server_url,
@@ -103,7 +112,7 @@ async def process_job(
         except Exception as e:
             last_err = e
             if attempt < MAX_RETRIES:
-                display.job_update(file_id, "RT", waiting=True)
+                display.job_update(file_id, "RT", done=0, waiting=True)
                 await asyncio.sleep(RETRY_DELAY * attempt)
 
     if not uploaded:
