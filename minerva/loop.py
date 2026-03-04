@@ -1,7 +1,7 @@
 import asyncio
+import sys
 from pathlib import Path
 from random import random
-import sys
 from typing import Any
 from urllib.parse import unquote, urlparse
 

@@ -143,10 +143,10 @@ tty: true         # Allocates a pseudo-TTY for the container
 
 > [!NOTE]
 > These options allow you to interact with the container directly through the terminal.
-> 
+>
 > When these are enabled, you may prefer to use docker attach <container_name> instead of docker logs to see real-time output and provide input.
 > To safely detach from an attached container without stopping it, use the key sequence `CTRL + P` then `CTRL + Q`.
-> 
+>
 > If you do not need terminal interactivity, you can comment out or remove these lines. This is useful for running the container in the background without manual input.
 
 ## Development
