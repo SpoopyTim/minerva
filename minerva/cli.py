@@ -68,8 +68,8 @@ def status() -> None:
 @click.option("--upload-server", default=UPLOAD_SERVER_URL, help="Upload API URL")
 @click.option("-c", "--concurrency", default=CONCURRENCY, help="Concurrent downloads")
 @click.option("-b", "--batch-size", default=BATCH_SIZE, help="Max files to fetch per API call")
-@click.option("-dr", "--dl-retries", default=MAX_DOWNLOAD_RETRIES, help="Max amount of attempts to download each job")
-@click.option("-ur", "--ul-retries", default=MAX_UPLOAD_RETRIES, help="Max amount of attempts to upload each job")
+@click.option("-d", "--dl-retries", default=MAX_DOWNLOAD_RETRIES, help="Max amount of attempts to download each job")
+@click.option("-u", "--ul-retries", default=MAX_UPLOAD_RETRIES, help="Max amount of attempts to upload each job")
 @click.option("-a", "--aria2c-connections", default=ARIA2C_CONNECTIONS, help="aria2c connections per file")
 @click.option(
     "-p",
