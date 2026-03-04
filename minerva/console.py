@@ -143,7 +143,7 @@ class WorkerDisplay:
             history_lines = list(self.history)
 
         # Active jobs table
-        table = Table(box=box.SIMPLE, show_header=True, expand=True, header_style="bold dim", padding=(0, 1))
+        table = Table(box=box.SIMPLE, show_header=False, expand=True, header_style="bold dim", padding=(0, 0))
         table.add_column("", width=3)
         table.add_column("File")
         table.add_column("Size", width=10, justify="right")
@@ -192,7 +192,7 @@ class WorkerDisplay:
         if history_lines:
             parts.extend(Text.from_markup(line) for line in history_lines)
             parts.append(Rule(style="dim"))
-        parts.append(table)
-        parts.append(Rule(style="dim"))
         parts.append(self.get_stats())
+        parts.append(Rule(style="dim"))
+        parts.append(table)
         return Group(*parts)
