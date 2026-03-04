@@ -133,21 +133,22 @@ You can later stop the container with `docker compose down`.
 If you prefer to run it in the foreground (attached to your terminal), simply use `docker compose up`.
 
 ### Terminal Interactivity
-This project supports interactive terminal sessions within its Docker containers. The configuration is controlled via the `stdin_open` and `tty` options in the [`docker-compose.yml`](./docker-compose.yml)
+These options allow you to interact with the container directly through the terminal.
 
-#### Enable terminal interactivity
+The configuration is controlled via the `stdin_open` and `tty` options in the [`docker-compose.yml`](./docker-compose.yml)
+
 ```
 stdin_open: true  # Keeps STDIN open even if not attached
 tty: true         # Allocates a pseudo-TTY for the container
 ```
 
-> [!NOTE]
-> These options allow you to interact with the container directly through the terminal.
->
-> When these are enabled, you may prefer to use docker attach <container_name> instead of docker logs to see real-time output and provide input.
-> To safely detach from an attached container without stopping it, use the key sequence `CTRL + P` then `CTRL + Q`.
->
-> If you do not need terminal interactivity, you can comment out or remove these lines. This is useful for running the container in the background without manual input.
+If you do not need terminal interactivity, you can comment out or remove these lines. This is useful for running the container in the background without manual input.
+
+When these are enabled, you may prefer to use `docker attach <container_name>` instead of `docker logs <container_name>` to see real-time output without duplicated lines, and to provide input.
+
+**To safely detach from an attached container without stopping it, use the key sequence `CTRL + P` then `CTRL + Q`.**
+
+
 
 ## Development
 
