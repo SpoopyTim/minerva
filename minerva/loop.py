@@ -227,18 +227,18 @@ async def worker_loop(
                     seen_ids.discard(job["file_id"])
                 queue.task_done()
 
-    # If were in a headless non-tty/non-interactive environment this will be false.
+    # If were in a headless non-tty environment this will be false.
     if sys.stdin.isatty():
         asyncio.create_task(input_loop(display))
-        with Live(display, console=console, refresh_per_second=4, screen=False):
-            workers = [asyncio.create_task(worker()) for _ in range(concurrency)]
-            producer_task = asyncio.create_task(producer())
-            try:
-                await asyncio.gather(producer_task, *workers)
-            except KeyboardInterrupt:
-                console.print("\n[yellow]Shutting down…")
-                stop_event.set()
-                producer_task.cancel()
-                for t in workers:
-                    t.cancel()
-                return
+    with Live(display, console=console, refresh_per_second=4, screen=False):
+        workers = [asyncio.create_task(worker()) for _ in range(concurrency)]
+        producer_task = asyncio.create_task(producer())
+        try:
+            await asyncio.gather(producer_task, *workers)
+        except KeyboardInterrupt:
+            console.print("\n[yellow]Shutting down…")
+            stop_event.set()
+            producer_task.cancel()
+            for t in workers:
+                t.cancel()
+            return
