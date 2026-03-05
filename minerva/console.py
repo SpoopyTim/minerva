@@ -213,20 +213,22 @@ class WorkerDisplay:
             padding=(0, 0),
         )
 
-        table.add_column("Status", width=2)
-        table.add_column("File", justify="left")
-        table.add_column("Size", justify="right")
-        table.add_column("Speed", justify="right")
-        table.add_column("Progress", justify="right")
+        table.add_column("Status", width=2)  # fit UL/DL/RT
+        table.add_column("File", justify="left", ratio=1)  # expand to fill space, but prefer shorter names
+        table.add_column("Size", justify="right", width=10)  # fit sizes up to 10,0000 TB
+        table.add_column("Speed", justify="right", width=10)  # fit speeds up to 10000 T/s
+        table.add_column("Progress", justify="left", width=20)  # fit 14-width progress bar + percentage
+        table.add_column("Uptime", justify="right", width=5)  # fit mm:ss up to 99:59
 
         for info in visible_jobs:
-            st = info["status"]
-            color = {"DL": "cyan", "UL": "yellow", "RT": "magenta"}.get(st, "white")
+            color = {"DL": "cyan", "UL": "yellow", "RT": "magenta"}.get(info["status"], "white")
+            status = f"[{color}]{info['status']}[/{color}]"
             size = info["size"]
             done = info["done"]
             waiting = info["waiting"]
             speed = self.effective_speed(info)
             elapsed = now - info["start_time"]
+            elapsed_str = f"[dim]{int(elapsed // 60):02d}:{int(elapsed % 60):02d}[/dim]"
 
             if not waiting:
                 pct = min(1.0, done / (size or 1))
@@ -244,16 +246,16 @@ class WorkerDisplay:
                 )
             else:
                 spin = _SPINNER[int(now * 8) % len(_SPINNER)]
-                elapsed_str = f"{int(elapsed // 60):02d}:{int(elapsed % 60):02d}"
+                speed_str = f"[{color}]{spin} Waiting[/{color}]"
+
                 note = ""
                 if info["status"] == "DL":
-                    note = "Download waiting in queue..."
+                    note = "patiently in queue"
                 elif info["status"] == "UL":
-                    note = "Waiting on upload server..."
+                    note = "on server to respond"
                 elif info["status"] == "RT":
-                    note = "Failed, retrying the job..."
-                speed_str = f"[{color}]{spin}[/{color}]"
-                bar = f"[dim]{note} {elapsed_str}[/dim]"
+                    note = "to retry after fail"
+                bar = f"[{color}]{note}[/{color}]"
 
             file_str = Path(urlparse(info["label"]).path).name
             if info.get("is_cached"):
@@ -262,11 +264,12 @@ class WorkerDisplay:
             size_str = humanize.naturalsize(size)
 
             table.add_row(
-                f"[{color}]{st}[/{color}]",
+                status,
                 file_str,
                 size_str,
                 speed_str,
                 bar,
+                elapsed_str,
             )
 
         parts: list = []
