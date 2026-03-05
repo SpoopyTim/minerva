@@ -237,19 +237,19 @@ async def worker_loop(
                     seen_ids.discard(job["file_id"])
                 queue.task_done()
 
-    is_tty = sys.stdin.isatty()
     with Live(display, console=console, refresh_per_second=4, screen=False):
         workers = [asyncio.create_task(worker()) for _ in range(concurrency)]
         producer_task = asyncio.create_task(producer())
         update_rank_task = asyncio.create_task(update_rank_loop(display))
-        
         input_loop_task = None
-        if is_tty:
+
+        if sys.stdin.isatty():
             input_loop_task = asyncio.create_task(input_loop(display))
-        
+
         tasks = [producer_task, update_rank_task, *workers]
         if input_loop_task:
             tasks.append(input_loop_task)
+
         try:
             await asyncio.gather(*tasks)
         except KeyboardInterrupt:
