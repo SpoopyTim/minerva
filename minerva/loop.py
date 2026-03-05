@@ -246,6 +246,8 @@ async def worker_loop(
             console.print("\n[yellow]Shutting down…")
             stop_event.set()
             producer_task.cancel()
+            input_loop_task.cancel()
+            update_rank_task.cancel()
             for t in workers:
                 t.cancel()
             return
