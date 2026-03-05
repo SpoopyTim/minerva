@@ -167,7 +167,7 @@ class WorkerDisplay:
                             ),
                             (None, None),
                         )
-                    except (JSONDecodeError, httpx.ConnectError):
+                    except (JSONDecodeError, httpx.ConnectError, httpx.ReadTimeout):
                         pass
                     self._leaderboard_last_fetch = now
             if personal_stats is not None:
