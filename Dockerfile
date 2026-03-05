@@ -41,9 +41,9 @@ RUN curl -Ls https://astral.sh/uv/install.sh | sh
 
 WORKDIR /app
 
+# Copy venv and app from builder
 COPY --from=builder /app/.venv /app/.venv
 COPY --from=builder /app /app
 
-ENV UV_VENV=/app/.venv
-
+# Default command
 CMD ["uv", "run", "minerva", "run"]

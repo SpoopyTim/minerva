@@ -1,4 +1,5 @@
 import asyncio
+import sys
 from pathlib import Path
 from random import random
 from typing import Any
@@ -6,7 +7,6 @@ from urllib.parse import unquote, urlparse
 
 import httpx
 import jwt
-import readchar
 from humanfriendly import parse_size
 from humanize import naturalsize
 from rich.live import Live
@@ -23,6 +23,8 @@ _STOP = object()
 
 
 async def input_loop(display: WorkerDisplay) -> None:
+    import readchar
+
     while True:
         key = await asyncio.to_thread(readchar.readkey)
 
@@ -242,15 +244,24 @@ async def worker_loop(
     with Live(display, console=console, refresh_per_second=4, screen=False):
         workers = [asyncio.create_task(worker()) for _ in range(concurrency)]
         producer_task = asyncio.create_task(producer())
-        input_loop_task = asyncio.create_task(input_loop(display))
         update_rank_task = asyncio.create_task(update_rank_loop(display))
+        input_loop_task = None
+
+        if sys.stdin.isatty():
+            input_loop_task = asyncio.create_task(input_loop(display))
+
+        tasks = [producer_task, update_rank_task, *workers]
+        if input_loop_task:
+            tasks.append(input_loop_task)
+
         try:
-            await asyncio.gather(producer_task, input_loop_task, update_rank_task, *workers)
+            await asyncio.gather(*tasks)
         except KeyboardInterrupt:
             console.print("\n[yellow]Shutting down…")
             stop_event.set()
+            if input_loop_task:
+                input_loop_task.cancel()
             producer_task.cancel()
-            input_loop_task.cancel()
             update_rank_task.cancel()
             for t in workers:
                 t.cancel()
