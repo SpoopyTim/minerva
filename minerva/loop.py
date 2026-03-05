@@ -36,7 +36,7 @@ async def input_loop(display: WorkerDisplay) -> None:
 async def update_rank_loop(display: WorkerDisplay) -> None:
     while True:
         display.update_rank()
-        await asyncio.sleep(1)
+        await asyncio.sleep(20)
 
 
 async def worker_loop(
